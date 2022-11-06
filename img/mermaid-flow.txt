@@ -1,0 +1,11 @@
+```{mermaid}
+flowchart LR
+A(Measure Data) --> D(["spcr_make_data_bundle()"]):::black
+B(Measure Config) --> D
+C(Report Config) --> D
+D --> E(Data Bundle)
+E --> F(["spcr_make_report()"]):::black
+F --> G(SPC Report):::green
+classDef black fill:#111,stroke:#666,stroke-width:3px,color:#FFF
+classDef green fill:#3FBF41,stroke:#8CD88D,stroke-width:3px,color:white
+```

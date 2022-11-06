@@ -1,0 +1,271 @@
+---
+title: "Introducing {SPCreporter}"
+author: "Tom Smith<br>November 2022"
+format: 
+  revealjs:
+    #theme: [night]#, css/custom.scss]
+    slide-number: true
+#    self-contained: true
+---
+
+## Introducing {SPCreporter}
+
+{SPCreporter} is a simple way to add value to your performance reporting using statistical process control. Help sort signals from noise, and ensure your leadership are talking about signals that matter.
+
+<br>
+
+Code upfront: <https://github.com/ThomUK/SPCreporter>
+
+-   Inspired by the NHSEI Making Data Count programme
+
+-   Uses {NHSRplotthedots} for SPC calcs
+
+-   Aims to save you time!
+
+## The output
+
+![](img/example-output.gif)
+
+## Why?
+
+-   Finding signal in noise - easily report on the signals that matter
+-   Standardise reporting methodology
+-   Reduce leadtime from data to output (days to seconds)
+-   Step towards Reproducible Analytic Pipelines (RAP)
+
+::: incremental
+-   Machines do a great job of repetitive work
+-   Save analyst time for deeper work
+:::
+
+## Using the package
+
+![](img/mermaid-flow.png)
+
+------------------------------------------------------------------------
+
+![](img/mermaid-flow.png)
+
+``` r
+# make a data bundle from 3 arguments
+data_bundle <- spcr_make_data_bundle(
+  measure_data, 
+  measure_config, 
+  report_config
+)
+
+# pass the data to the reporting function
+spcr_make_report(data_bundle, ...)
+
+# All done!
+```
+
+## Three dataframes in
+
+![](img/mermaid-flow.png)
+
+1.  Measure data - your numbers\
+2.  Report config - your report items\
+3.  Measure config - config information
+
+::: notes
+Dataframes can be automatically queried from eg. SQL or through odbc, but they are laid out to make it easy to supply data manually where needed. The package assumes that at lead **some**s of the data you are reporting on will be manually supplied.
+:::
+
+## 1: Measure data - your numbers
+
+``` r
+# read the measure data
+weekly_data <- readxl::read_xlsx("my_data.xlsx", sheet = "week")
+monthly_data <- readxl::read_xlsx("my_data.xlsx", sheet = "month")
+measure_data <- list(week = weekly_data, month = monthly_data)
+```
+
+The data you want to plot, arranged in "wide" format.
+
+This makes supplying manually collected data simpler.
+
+![](img/data.png)
+
+## 2: Report config - your report items
+
+``` r
+# read the report config
+report_config <- readxl::read_xlsx("my_report_config.xlsx")
+```
+
+The items you want on your report.
+
+This dataframe controls the order that items appear in the output.
+
+![](img/report_config.png)
+
+## 3: Measure config - config info
+
+``` r
+# read the measure config
+measure_config <- readxl::read_xlsx("my_measure_config.xlsx")
+```
+
+Dataframe containing configuration relevant for each measure.
+
+Rarely changes - probably one file for your specialty, department, or division.
+
+-   Data source
+-   Which direction represents improvement
+-   What is the target, and who was it set by
+-   ...
+
+## spcr_make_data_bundle()
+
+``` r
+# make the data bundle
+data_bundle <- spcr_make_data_bundle(
+  measure_data, 
+  measure_config, 
+  report_config
+)
+```
+
+-   Reads and transforms the 3 input files\
+-   Performs SPC calculations with {NHSRplotthedots}\
+-   Creates the ggplot chart objects\
+-   Does some string processing for convenience later
+
+## Resulting data bundle
+
+::: {layout="[[60,-40], [100], [100]]"}
+![](img/mermaid-flow.png)
+
+![](img/data_bundle1.png) ![](img/data_bundle2.png)
+:::
+
+## spcr_make_report()
+
+``` r
+spcr_make_report(
+  data_bundle = data_bundle,
+  title = "My SPC Report",
+  report_ref = "Unique Report reference ABC123",
+  data_cutoff_dttm = as.POSIXct("2022-10-31 23:59:59"),
+  author_name = "Tom Smith",
+  author_email = "thomas.smith5@nuh.nhs.uk"
+)
+```
+
+-   Creates your RMarkdown report
+-   6 required arguments, and a further 9 optional args to shape the output
+-   Output directory, paper colour, subtitles, intros, logo, data quality ratings, etc...
+
+------------------------------------------------------------------------
+
+## Demo
+
+-   Start to finish in real time
+-   With a logo, a department caption, and a different paper colour
+
+``` r
+spcr_make_report(
+  data_bundle,
+  title = "Hooray for NHS-R Conference",
+  report_ref = "NHS-R 001",
+  data_cutoff_dttm = as.POSIXct("2022-09-30 23:59:59"),
+  author_name = "Tom Smith (Insight Manager)",
+  author_email = "thomas.smith5@nuh.nhs.uk",
+  logo_path = "C:/path/to/your/logo.jpg", # add a logo
+  department = "OPEN SOURCE", # add a department caption
+  paper_colour = "#BED6E6" # change the paper colour
+)
+```
+
+## Demo
+
+![](img/nhsr-output.gif)
+
+------------------------------------------------------------------------
+
+## Walk to create a report set
+
+-   Simple example adding back red, amber, and green paper colour
+-   Possible to create suites of reports once you have your data pipline and configurations set up
+
+``` r
+# example where we map over all reports, creating them in one go
+all_my_reports <- tibble::tibble(
+  title = rep("Batch of Reports", 3),
+  report_ref = rep("NHS-R 002", 3),
+  author_name = rep("Tom Smith (Insight Manager)", 3),
+  author_email = rep("thomas.smith5@nuh.nhs.uk", 3),
+  data_cutoff_dttm = rep(as.POSIXct("2022-09-30 23:59:59"), 3),
+  paper_colour = c("red", "yellow", "green") # create reports with different paper colours
+)
+
+purrr::pwalk(all_my_reports, spcr_make_report, data_bundle = data_bundle)
+```
+
+## Walk Demo
+
+![](img/rag-output.gif)
+
+## Summary
+
+End to end code:
+
+``` r
+spcr_make_data_bundle(
+  measure_data, 
+  measure_config, 
+  report_config
+) %>% 
+spcr_make_report(
+  title = "My SPC Report",
+  report_ref = "Unique Report reference ABC123",
+  data_cutoff_dttm = as.POSIXct("2022-10-31 23:59:59"),
+  author_name = "Tom Smith",
+  author_email = "thomas.smith5@nuh.nhs.uk"
+)
+```
+
+Source code: <https://github.com/ThomUK/SPCreporter>\
+Please get in touch with any Qs.\
+Issues and PRs welcome!
+
+## The "so what" of Open-Source code in the NHS
+
+-   Code with financial value
+
+-   Practical barriers to working openly
+
+> Could the comms team approve the code for release? They have a policy that covers releasing text publicly.
+
+## Financial Value
+
+-   Value to part of my division \~1 week/mth. £10K/yr
+-   Potential value to my trust. 6 divisions = £60K/yr
+-   Potential value to NHS (25% of \~220 trusts) = £3.3M/yr
+
+::: incremental
+-   120 hours of code. Potential for £27.5k value created per hour of development time. Re-occurring annually.
+
+-   [Only if code is shared.]{style="color: red;"}
+
+-   Only if people who want to use it are [supported to do so by IT policies]{style="color: red;"}.
+:::
+
+::: notes
+-   (Value created through improved decision-making not included above).
+:::
+
+## Code is valuable
+
+-   Let's write more code
+
+-   Share more code
+
+-   De-mystify & capture the value of Open-Source
+
+> How can [you]{.fragment .highlight-red} in your role help say "yes" to open-source in the NHS?
+
+## Q & A
+
+![](img/questions.png)
