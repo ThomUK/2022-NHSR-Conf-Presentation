@@ -5,6 +5,7 @@ format:
   revealjs:
     #theme: [night]#, css/custom.scss]
     slide-number: true
+    output-file: index.html
 #    self-contained: true
 ---
 
